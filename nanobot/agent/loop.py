@@ -64,6 +64,7 @@ class AgentLoop:
         session_manager: SessionManager | None = None,
         mcp_servers: dict | None = None,
         channels_config: ChannelsConfig | None = None,
+        max_context_tokens: int = 100_000,
     ):
         from nanobot.config.schema import ExecToolConfig
         self.bus = bus
@@ -81,7 +82,7 @@ class AgentLoop:
         self.cron_service = cron_service
         self.restrict_to_workspace = restrict_to_workspace
 
-        self.context = ContextBuilder(workspace)
+        self.context = ContextBuilder(workspace, max_context_tokens=max_context_tokens)
         self.sessions = session_manager or SessionManager(workspace)
         self.tools = ToolRegistry()
         self.subagents = SubagentManager(
@@ -199,9 +200,8 @@ class AgentLoop:
 
             if response.has_tool_calls:
                 if on_progress:
-                    clean = self._strip_think(response.content)
-                    if clean:
-                        await on_progress(clean)
+                    # Only send tool hints during tool execution, not full content
+                    # The final response will be sent after the loop completes
                     await on_progress(self._tool_hint(response.tool_calls), tool_hint=True)
 
                 tool_call_dicts = [
@@ -237,6 +237,7 @@ class AgentLoop:
                     logger.error("LLM returned error: {}", (clean or "")[:200])
                     final_content = clean or "Sorry, I encountered an error calling the AI model."
                     break
+                # Don't send progress for final response - it will be sent by _process_message
                 messages = self.context.add_assistant_message(
                     messages, clean, reasoning_content=response.reasoning_content,
                     thinking_blocks=response.thinking_blocks,
@@ -246,12 +247,90 @@ class AgentLoop:
 
         if final_content is None and iteration >= self.max_iterations:
             logger.warning("Max iterations ({}) reached", self.max_iterations)
-            final_content = (
-                f"I reached the maximum number of tool call iterations ({self.max_iterations}) "
-                "without completing the task. You can try breaking the task into smaller steps."
-            )
+            final_content = self._format_max_iterations_error(iteration, tools_used, messages)
 
         return final_content, tools_used, messages
+
+    def _format_max_iterations_error(
+        self,
+        iteration: int,
+        tools_used: list[str],
+        messages: list[dict],
+    ) -> str:
+        """Format a developer-friendly error message when max iterations is reached."""
+        # Count tool usage frequency
+        tool_counts: dict[str, int] = {}
+        for tool in tools_used:
+            tool_counts[tool] = tool_counts.get(tool, 0) + 1
+        
+        # Get last few tool calls for context
+        recent_tools = tools_used[-5:] if len(tools_used) > 5 else tools_used
+        
+        # Analyze message history for progress hints
+        last_user_msg = ""
+        for msg in reversed(messages):
+            if msg.get("role") == "user":
+                content = msg.get("content", "")
+                if isinstance(content, str):
+                    last_user_msg = content[:200]
+                    break
+                elif isinstance(content, list):
+                    for part in content:
+                        if part.get("type") == "text":
+                            last_user_msg = part.get("text", "")[:200]
+                            break
+                if last_user_msg:
+                    break
+        
+        # Build tool usage summary
+        tool_summary = "\n".join(
+            f"  - {tool}: {count} time(s)" for tool, count in sorted(tool_counts.items(), key=lambda x: -x[1])
+        )
+        
+        # Suggest next steps
+        suggestions = []
+        if "exec" in tool_counts or "shell" in tool_counts:
+            suggestions.append("- If running a long script, consider breaking it into smaller commands")
+        if "web_search" in tool_counts or "web_fetch" in tool_counts:
+            suggestions.append("- If gathering information, try narrowing the search scope")
+        if "read_file" in tool_counts or "list_dir" in tool_counts:
+            suggestions.append("- If exploring files, consider targeting specific paths")
+        if len(tools_used) > iteration * 0.8:
+            suggestions.append("- High tool call frequency detected - consider batching operations")
+        
+        suggestions.append(f"- Break the task into smaller, independent subtasks")
+        suggestions.append(f"- Use /new to start a fresh session with clearer context")
+        
+        # Check if cron might help (for recurring tasks)
+        cron_hint = ""
+        if any(keyword in last_user_msg.lower() for keyword in ["every", "daily", "hourly", "schedule", "reminder", "periodic"]):
+            cron_hint = """\n\n💡 **Scheduling Hint**: Your task sounds like it might be recurring. 
+Consider using the `cron` tool to schedule it:
+```
+cron add --message "Your task" --cron_expr "0 9 * * *"
+```"""
+        
+        return f"""⚠️ **Max Iterations Reached** ({iteration}/{self.max_iterations})
+
+**Task Progress**:
+- Total tool calls made: {len(tools_used)}
+- Last operation: {recent_tools[-1] if recent_tools else 'N/A'}
+- Recent tools used: {', '.join(recent_tools)}
+
+**Tool Usage Summary**:
+{tool_summary}
+
+**Original Request**:
+> {last_user_msg}
+
+**Suggested Next Steps**:
+{chr(10).join(suggestions)}
+{cron_hint}
+
+**Technical Details**:
+The agent loop terminated after {iteration} iterations without reaching a final response. 
+This usually means the task requires more steps than the current limit allows, or the agent 
+is stuck in a loop. Review the tool usage pattern above to identify potential issues."""
 
     async def run(self) -> None:
         """Run the agent loop, dispatching messages as tasks to stay responsive to /stop."""
@@ -422,6 +501,7 @@ class AgentLoop:
         )
 
         async def _bus_progress(content: str, *, tool_hint: bool = False) -> None:
+            """Send progress updates during tool execution."""
             meta = dict(msg.metadata or {})
             meta["_progress"] = True
             meta["_tool_hint"] = tool_hint
