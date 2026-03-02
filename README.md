@@ -1073,5 +1073,66 @@ PRs welcome! The codebase is intentionally small and readable. 🤗
 
 
 <p align="center">
+
+## 🔧 Version Management (For Developers Modifying Source)
+
+If you've modified nanobot's source code and want to track upstream releases while preserving your changes:
+
+### Quick Start
+
+```bash
+# Check upstream status
+./scripts/check-upstream.sh
+
+# Sync to latest upstream version
+./scripts/sync-upstream.sh
+
+# Sync to specific version
+./scripts/sync-upstream.sh v0.1.4.post4
+```
+
+### Workflow
+
+1. **Your changes live on a dedicated branch**: `local/customizations`
+2. **Upstream tags are tracked**: `v0.1.4.post3`, `v0.1.4.post4`, etc.
+3. **Sync = rebase your branch onto new tag**
+
+```bash
+# Initial setup (one-time)
+git checkout -b local/customizations
+git add -A
+git commit -m "feat: local customizations"
+
+# When new upstream version releases
+git checkout local/customizations
+./scripts/sync-upstream.sh  # Rebases onto latest tag
+```
+
+### Conflict Resolution
+
+If conflicts occur during rebase:
+
+```bash
+# 1. Resolve conflicts in shown files
+# 2. Stage resolved files
+git add <file>
+# 3. Continue rebase
+git rebase --continue
+# 4. Or abort if needed
+git rebase --abort
+```
+
+### Architecture
+
+```
+upstream/main ──→ v0.1.4.post3 ──→ v0.1.4.post4 ──→ ...
+                          │
+                          │ rebase
+                          ▼
+your branch:    local/customizations (your changes)
+```
+
+See [`VERSION_CONTROL_STRATEGY.md`](./VERSION_CONTROL_STRATEGY.md) for full details.
+
   <sub>nanobot is for educational, research, and technical exchange purposes only</sub>
 </p>
