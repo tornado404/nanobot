@@ -24,6 +24,14 @@ pip install pyautogui pillow pytesseract
 WSL 环境需要设置：
 ```bash
 export DISPLAY=:0
+export XAUTHORITY=/dev/null  # 解决 Xauthority 警告（可选）
+```
+
+或者添加到 `~/.bashrc`：
+```bash
+echo 'export DISPLAY=:0' >> ~/.bashrc
+echo 'export XAUTHORITY=/dev/null' >> ~/.bashrc
+source ~/.bashrc
 ```
 
 ## API 接口
