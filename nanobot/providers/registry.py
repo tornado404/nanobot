@@ -84,6 +84,7 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
     # === Gateways (detected by api_key / api_base, not model name) =========
     # Gateways can route any model, so they win in fallback.
 
+
     # OpenRouter: global gateway, keys start with "sk-or-"
     ProviderSpec(
         name="openrouter",
@@ -294,10 +295,28 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
         model_overrides=(),
     ),
 
+    # bailian: Qwen models, OpenAI-compatible.
+    ProviderSpec(
+        name="bailian",
+        keywords=("bailian", "qwen"),
+        env_key="BAILIAN_API_KEY",
+        display_name="Bailian",
+        litellm_prefix="openai",
+        skip_prefixes=("bailian/", "openai/"),
+        env_extras=(),
+        is_gateway=False,
+        is_local=False,
+        detect_by_key_prefix="",
+        detect_by_base_keyword="",
+        default_api_base="https://coding.dashscope.aliyuncs.com/v1",
+        strip_model_prefix=False,
+        model_overrides=(),
+    ),
+
     # DashScope: Qwen models, needs "dashscope/" prefix.
     ProviderSpec(
         name="dashscope",
-        keywords=("qwen", "dashscope"),
+        keywords=("397", "dashscope"),
         env_key="DASHSCOPE_API_KEY",
         display_name="DashScope",
         litellm_prefix="dashscope",         # qwen-max → dashscope/qwen-max
@@ -350,7 +369,7 @@ PROVIDERS: tuple[ProviderSpec, ...] = (
         is_local=False,
         detect_by_key_prefix="",
         detect_by_base_keyword="",
-        default_api_base="https://api.minimax.io/v1",
+        default_api_base="https://api.minimaxi.com/v1",
         strip_model_prefix=False,
         model_overrides=(),
     ),
