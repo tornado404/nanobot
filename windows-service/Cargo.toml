@@ -1,0 +1,64 @@
+[package]
+name = "nanobot-capture-service"
+version = "0.1.0"
+edition = "2021"
+authors = ["nanobot team"]
+description = "Windows screen capture service for nanobot using Windows.Graphics.Capture"
+
+[dependencies]
+# Windows Runtime
+windows = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_System_Com",
+    "Win32_System_Threading",
+    "Win32_System_WinRT",
+    "Win32_System_WinRT_Direct3D11",
+    "Win32_System_WinRT_Graphics_Capture",
+    "Win32_System_WindowsProgramming",
+    "Graphics_Capture",
+    "Graphics_DirectX",
+    "Graphics_DirectX_Direct3D11",
+    "Foundation",
+    "Foundation_Collections",
+    "Foundation_Numerics",
+    "Storage_Streams",
+] }
+
+# AF_UNIX socket support on Windows
+uds_windows = "1.1"
+
+# Image encoding (JPEG)
+image = "0.24"
+
+# Logging
+log = "0.4"
+env_logger = "0.10"
+chrono = "0.4"
+
+# Error handling
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Tokio async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Configuration
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[build-dependencies]
+windows-bindgen = "0.52"
+
+[[bin]]
+name = "nanobot-capture-service"
+path = "src/main.rs"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
