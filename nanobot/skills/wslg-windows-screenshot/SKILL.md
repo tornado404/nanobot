@@ -1,5 +1,9 @@
 # WSLg Windows Screenshot Skill
 
+> **💡 Standalone Package Available**: 
+> Install with `pip install git+https://YOUR_TOKEN@github.com/YOUR_USERNAME/wslg-screenshot.git`
+> See: https://github.com/YOUR_USERNAME/wslg-screenshot
+
 ## 📋 技能概述
 
 在 WSL2 + WSLg 环境下，通过调用 Windows PowerShell 实现屏幕截图，解决 WSL 侧无法直接截图的问题。
@@ -292,11 +296,15 @@ python3 test_wslg_screenshot.py
 
 - **gui-input-control**: GUI 输入控制（鼠标键盘）
 - **opencode-coding-screenshot**: 编码任务截图
-- **wuji-map-debug**: 地图调试技能
+- **windows-screen-capture**: Windows 屏幕捕获服务（Rust 实现）
 
 ---
 
 ## 📝 更新日志
+
+### v1.0.0 (2026-03-05)
+- ✅ 添加独立包引用说明
+- ✅ 更新使用示例
 
 ### v1.0.0 (2026-03-03)
 - ✅ 初始版本
@@ -308,4 +316,4 @@ python3 test_wslg_screenshot.py
 ---
 
 *作者：nanobot 🐈*  
-*最后更新：2026-03-03*
+*最后更新：2026-03-05*
