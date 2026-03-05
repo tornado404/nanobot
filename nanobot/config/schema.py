@@ -315,6 +315,26 @@ class MCPServerConfig(Base):
     tool_timeout: int = 30  # Seconds before a tool call is cancelled
 
 
+class ScreenCaptureConfig(Base):
+    """Windows screen capture tool configuration."""
+    
+    enabled: bool = True
+    socket_path: str = "/tmp/nanobot-capture.sock"
+    timeout_seconds: int = 5
+    max_retries: int = 3
+    quality: int = 85  # JPEG quality 1-100
+
+
+class ToolsConfig(Base):
+    """Tools configuration."""
+    
+    web: WebToolsConfig = Field(default_factory=WebToolsConfig)
+    exec: ExecToolConfig = Field(default_factory=ExecToolConfig)
+    restrict_to_workspace: bool = False  # If true, restrict all tool access to workspace directory
+    mcp_servers: dict[str, MCPServerConfig] = Field(default_factory=dict)
+    screen_capture: ScreenCaptureConfig = Field(default_factory=ScreenCaptureConfig)
+
+
 class ToolsConfig(Base):
     """Tools configuration."""
 
